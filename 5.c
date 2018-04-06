@@ -5,20 +5,20 @@
 #include<conio.h>
 using namespace std;
 
-class roundrobin //class representing round robin scheduling
+class roundrobin 
 {
-       int *rq;//request times
-       int    n;//number of processes
-       int    q;//time quantum
-       int    *w;//wait times
-       int    *t;//turn-around times
-       int *a;//arrival times
+       int *rq;
+       int    n;
+       int    q;
+       int    *w;
+       int    *t;
+       int *a;
        list<int> order;
 public:
        roundrobin(void);
        ~roundrobin(void);
-       int read();//read input from the user
-       void calc();//to calculate turn-around and wait times of all processes and the ordering
+       int read();
+       void calc();
        void display();
 };
 roundrobin::roundrobin(void)
@@ -36,7 +36,7 @@ roundrobin::~roundrobin(void)
               delete[] a;
        }
 }
-int roundrobin::read()//read input from the user
+int roundrobin::read()
 {
        int i;
        cout<<"Enter number of processes:";
@@ -74,13 +74,12 @@ int roundrobin::read()//read input from the user
        cin>>q;
        return 1;
 }
-void roundrobin::calc()//to calculate turn-around and wait times of all processes and the ordering
-{
+void roundrobin::calc()
        int j=0;
        int    time;
        int k;
        int i;
-       int *r;//remaining times
+       int *r;
        try
        {
               r=new int[n];
@@ -91,38 +90,37 @@ void roundrobin::calc()//to calculate turn-around and wait times of all processe
               exit(1);
        }
        for(i=0;i<n;i++)     r[i]=rq[i];
-       bool f=false;//flag to indicate whether any process was scheduled as i changed from 0 to n-1 in the next for loop
-       int sp=0;//time spent
-       for(i=0;j<n;i=(i+1)%n)//while there are uncompleted processes
+       bool f=false;
+       int sp=0;
+       for(i=0;j<n;i=(i+1)%n)
        {
-              if(r[i]>0&&sp>=a[i])//find the next uncompleted process which has already or just arrived
+              if(r[i]>0&&sp>=a[i])
               {
                      f=true;
-                     if(r[i]<=q)//if the process requests for time less than the quantum
-                            time=r[i];//time to be alloted in this turn is the complete requested time
-                     else   time=q;//else, it is the quantum time
-                     //schedule the process
+                     if(r[i]<=q)
+                            time=r[i];
+                     else   time=q;
+                    
                      t[i]+=time,r[i]-=time,order.push_back(i+1);
-                     if(r[i]==0)   j++;//if the process has got completed, increment j
+                     if(r[i]==0)   j++;
                      for(k=0;k<n;k++)
-                            if(r[k]!=0&&k!=i&&a[k]<sp+time)//for all other arrived processes incompleted after scheduling this process
-                                   if(!(a[k]<=sp))//if they arrived while scheduling this process
-                                          w[k]+=sp+time-a[k],t[i]+=sp+time-a[k];//account for the time they spent waiting while the process was being scheduled
-                                   else
-                                          w[k]+=time,t[k]+=time;//add time to their wait times and turn-around times
+                            if(r[k]!=0&&k!=i&&a[k]<sp+time)
+                                   if(!(a[k]<=sp))
+                                          w[k]+=sp+time-a[k],t[i]+=sp+time-a[k];
+                                       else
+                                          w[k]+=time,t[k]+=time;
                      sp+=time;
                      continue;
               }
               if(i==n-1)
               {
                      if(!f)
-                     //now there are no more arrived processes to be scheduled
-                     //so change sp to the arrival time of next arriving process
+                  
                      {
                             int it;
-                            int diff=0;//diff between present time spent and arrivaltime of next arriving process
+                            int diff=0;
                             for(it=0;it<n;it++)
-                                   if(sp<a[it])//if process has'nt yet arrived
+                                   if(sp<a[it])
                                    {
                                           if(diff==0)   diff=a[it]-sp;
                                           else if(diff>a[it]-sp)      diff=a[it]-sp;
@@ -137,8 +135,8 @@ void roundrobin::calc()//to calculate turn-around and wait times of all processe
 void roundrobin::display()
 {
        int i;
-       float tav=0;//average turn-around time
-       float wav=0;//average wait time                  
+       float tav=0;
+       float wav=0;                 
        for(i=0;i<n;i++)
               tav+=t[i],wav+=w[i];
        tav/=n,wav/=n;
