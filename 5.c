@@ -1,96 +1,159 @@
-#include<stdio.h>
+#pragma once
+#include<list>
+#include<iomanip>
+#include<iostream>
+#include<conio.h>
+using namespace std;
 
-struct times
+class roundrobin //class representing round robin scheduling
 {
-       int p,art,but,wtt,tat,rnt;
+       int *rq;//request times
+       int    n;//number of processes
+       int    q;//time quantum
+       int    *w;//wait times
+       int    *t;//turn-around times
+       int *a;//arrival times
+       list<int> order;
+public:
+       roundrobin(void);
+       ~roundrobin(void);
+       int read();//read input from the user
+       void calc();//to calculate turn-around and wait times of all processes and the ordering
+       void display();
 };
-
-
-void sortart(struct times a[],int pro)
+roundrobin::roundrobin(void)
 {
-       int i,j;
-       struct times temp;
-       for(i=0;i<pro;i++)
-       {
-              for(j=i+1;j<pro;j++)
-              {
-                     if(a[i].art > a[j].art)
-                     {
-                           temp = a[i];
-                           a[i] = a[j];
-                           a[j] = temp;
-                     }
-              }
-       }
-       return;
+       rq=w=t=NULL;
 }
 
+roundrobin::~roundrobin(void)
+{
+       if(rq!=NULL)
+       {
+              delete[] rq;
+              delete[] w;
+              delete[] t;
+              delete[] a;
+       }
+}
+int roundrobin::read()//read input from the user
+{
+       int i;
+       cout<<"Enter number of processes:";
+       cin>>n;
+       if(rq!=NULL)
+       {
+              delete[] rq;
+              delete[] w;
+              delete[] t;
+       }
+       try
+       {
+              rq=new int[n];
+              w=new int[n];
+              t=new int[n];
+              a=new int[n];
+       }
+       catch(bad_alloc &ba)
+       {
+              cerr<<ba.what()<<endl;
+              exit(1);
+       }
+       cout<<"Enter arrival times:\n";
+       for(i=0;i<n;i++)
+       {
+              cin>>a[i];
+       }
+       cout<<"Enter request times:\n";
+       for(i=0;i<n;i++)
+       {
+              cin>>rq[i];
+              w[i]=t[i]=0;
+       }
+       cout<<"Enter time quantum:";
+       cin>>q;
+       return 1;
+}
+void roundrobin::calc()//to calculate turn-around and wait times of all processes and the ordering
+{
+       int j=0;
+       int    time;
+       int k;
+       int i;
+       int *r;//remaining times
+       try
+       {
+              r=new int[n];
+       }
+       catch(bad_alloc &ba)
+       {
+              cerr<<ba.what()<<endl;
+              exit(1);
+       }
+       for(i=0;i<n;i++)     r[i]=rq[i];
+       bool f=false;//flag to indicate whether any process was scheduled as i changed from 0 to n-1 in the next for loop
+       int sp=0;//time spent
+       for(i=0;j<n;i=(i+1)%n)//while there are uncompleted processes
+       {
+              if(r[i]>0&&sp>=a[i])//find the next uncompleted process which has already or just arrived
+              {
+                     f=true;
+                     if(r[i]<=q)//if the process requests for time less than the quantum
+                            time=r[i];//time to be alloted in this turn is the complete requested time
+                     else   time=q;//else, it is the quantum time
+                     //schedule the process
+                     t[i]+=time,r[i]-=time,order.push_back(i+1);
+                     if(r[i]==0)   j++;//if the process has got completed, increment j
+                     for(k=0;k<n;k++)
+                            if(r[k]!=0&&k!=i&&a[k]<sp+time)//for all other arrived processes incompleted after scheduling this process
+                                   if(!(a[k]<=sp))//if they arrived while scheduling this process
+                                          w[k]+=sp+time-a[k],t[i]+=sp+time-a[k];//account for the time they spent waiting while the process was being scheduled
+                                   else
+                                          w[k]+=time,t[k]+=time;//add time to their wait times and turn-around times
+                     sp+=time;
+                     continue;
+              }
+              if(i==n-1)
+              {
+                     if(!f)
+                     //now there are no more arrived processes to be scheduled
+                     //so change sp to the arrival time of next arriving process
+                     {
+                            int it;
+                            int diff=0;//diff between present time spent and arrivaltime of next arriving process
+                            for(it=0;it<n;it++)
+                                   if(sp<a[it])//if process has'nt yet arrived
+                                   {
+                                          if(diff==0)   diff=a[it]-sp;
+                                          else if(diff>a[it]-sp)      diff=a[it]-sp;
+                                   }
+                            sp+=diff;
+                     }
+                     f=false;
+              }
+       }
+       delete[] r;
+}
+void roundrobin::display()
+{
+       int i;
+       float tav=0;//average turn-around time
+       float wav=0;//average wait time                  
+       for(i=0;i<n;i++)
+              tav+=t[i],wav+=w[i];
+       tav/=n,wav/=n;
+       cout<<"Scheduling order:\n";
+       list<int>::iterator oi;            
+       for(oi=order.begin();oi!=order.end();oi++)
+              cout<<*oi<<"\t";
+       cout<<"\nAverage turn-around time = "<<tav<<endl<<"Average wait time = "<<wav<<endl;
+}
 int main()
 {
-       int i,j,pro,time,remain,flag=0,ts;
-       struct times a[100];
-       float avgwt=0,avgtt=0;
-       printf("Round Robin Scheduling Algorithm\n");
-       printf("Note -\n1. Arrival Time of at least on process should be 0\n2. CPU should never be idle\n");
-       printf("Enter Number Of Processes : ");
-       scanf("%d",&pro);
-       remain=pro;
-       for(i=0;i<pro;i++)
-       {
-              printf("Enter arrival time and Burst time for Process P%d : ",i);
-              scanf("%d%d",&a[i].art,&a[i].but);
-              a[i].p = i;
-              a[i].rnt = a[i].but;
-       }
-       sortart(a,pro);
-       printf("Enter Time Slice OR Quantum Number : ");
-       scanf("%d",&ts);
-       printf("\n***************************************\n");
-       printf("Gantt Chart\n");
-       printf("0");
-       for(time=0,i=0;remain!=0;)
-       {
-              if(a[i].rnt<=ts && a[i].rnt>0)
-              {
-                     time = time + a[i].rnt;
-                     printf(" -> [P%d] <- %d",a[i].p,time);
-                     a[i].rnt=0;
-                     flag=1;
-              }
-              else if(a[i].rnt > 0)
-              {
-                     a[i].rnt = a[i].rnt - ts;
-                     time = time + ts;
-                     printf(" -> [P%d] <- %d",a[i].p,time);
-              }
-              if(a[i].rnt==0 && flag==1)
-              {
-                     remain--;
-                     a[i].tat = time-a[i].art;
-                     a[i].wtt = time-a[i].art-a[i].but;
-                     avgwt = avgwt + time-a[i].art-a[i].but;
-                     avgtt = avgtt + time-a[i].art;
-                     flag=0;
-              }
-              if(i==pro-1)
-                     i=0;
-              else if(a[i+1].art <= time)
-                     i++;
-              else
-                     i=0;
-       }
-       printf("\n\n");
-       printf("***************************************\n");
-       printf("Pro\tArTi\tBuTi\tTaTi\tWtTi\n");
-       printf("***************************************\n");
-       for(i=0;i<pro;i++)
-       {
-              printf("P%d\t%d\t%d\t%d\t%d\n",a[i].p,a[i].art,a[i].but,a[i].tat,a[i].wtt);
-       }
-       printf("***************************************\n");
-       avgwt = avgwt/pro;
-       avgtt = avgtt/pro;
-       printf("Average Waiting Time : %.2f\n",avgwt);
-       printf("Average Turnaround Time : %.2f\n",avgtt);
-       return 0;
+       roundrobin r;
+       r.read();
+       r.calc();
+       r.display();
+       cout<<"Press any key to exit...";
+       _getch();
 }
